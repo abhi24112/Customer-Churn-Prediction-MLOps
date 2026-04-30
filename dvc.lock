@@ -1,0 +1,68 @@
+schema: '2.0'
+stages:
+  data_preprocessing:
+    cmd: python -m src.pipelines.preprocessing_pipeline
+    deps:
+    - path: src/components/data_ingestion.py
+      hash: md5
+      md5: f732a656111490ac6a4f2bfdfcbe6653
+      size: 809
+    - path: src/components/data_loader.py
+      hash: md5
+      md5: f9253b7bc3b9500049a68905b1f09b88
+      size: 964
+    - path: src/components/data_preprocessing.py
+      hash: md5
+      md5: 39d680d6c30634afe26e64ed00bece40
+      size: 5333
+    - path: src/data/raw_data/
+      hash: md5
+      md5: 260cab582d8eb158b899f8dc28ae594f.dir
+      size: 977501
+      nfiles: 1
+    - path: src/pipelines/preprocessing_pipeline.py
+      hash: md5
+      md5: 84764f2ae1fcf65b29e3fdb89d14df4c
+      size: 1145
+    outs:
+    - path: src/data/processed/processed.csv
+      hash: md5
+      md5: d0fb646a414e219f7b0591591f1f834d
+      size: 1059585
+  training:
+    cmd: python -m src.pipelines.training_pipeline
+    deps:
+    - path: src/components/data_splitting.py
+      hash: md5
+      md5: c6f7198e6843ad527c6a21b444b948c1
+      size: 1531
+    - path: src/components/evaluate.py
+      hash: md5
+      md5: 1a76aeabd5e3117152c03f6d899e3171
+      size: 3661
+    - path: src/components/model_saving.py
+      hash: md5
+      md5: ec4e599d55ca39c4a93d69c9eb06fcef
+      size: 985
+    - path: src/components/model_training.py
+      hash: md5
+      md5: 2adacc4b21cd37d5635f22f3980e743d
+      size: 3724
+    - path: src/components/utils.py
+      hash: md5
+      md5: 6630c7fd439283fee6265965f5da6671
+      size: 510
+    - path: src/data/processed/processed.csv
+      hash: md5
+      md5: d0fb646a414e219f7b0591591f1f834d
+      size: 1059585
+    outs:
+    - path: models/
+      hash: md5
+      md5: 656accd6ddc40bb29cbf5df7d1f33def.dir
+      size: 1213558
+      nfiles: 1
+    - path: reports/metrics.json
+      hash: md5
+      md5: 8b8a4e1aba8c1fd005073c8b2e8ac022
+      size: 202

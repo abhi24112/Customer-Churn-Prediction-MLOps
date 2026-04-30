@@ -1,0 +1,27 @@
+stages:
+  data_preprocessing:
+    cmd: python -m src.pipelines.preprocessing_pipeline
+    deps:
+      - src/data/raw_data/
+      - src/pipelines/preprocessing_pipeline.py
+      - src/components/data_ingestion.py
+      - src/components/data_loader.py
+      - src/components/data_preprocessing.py
+    outs:
+      - src/data/processed/processed.csv
+
+  training:
+    cmd: python -m src.pipelines.training_pipeline
+    deps:
+      - src/data/processed/processed.csv
+      - src/components/data_splitting.py
+      - src/components/model_training.py
+      - src/components/evaluate.py
+      - src/components/model_saving.py
+      - src/components/utils.py
+    outs:
+      - models/
+      - reports/metrics.json
+
+  
+
