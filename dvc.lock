@@ -50,16 +50,55 @@ stages:
       size: 3724
     - path: src/components/utils.py
       hash: md5
-      md5: 6630c7fd439283fee6265965f5da6671
-      size: 510
+      md5: 0714c839e9f65f9acfe68160c8eaacce
+      size: 700
     - path: src/data/processed/processed.csv
       hash: md5
       md5: d0fb646a414e219f7b0591591f1f834d
       size: 1059585
+    params:
+      params.yaml:
+        data.random_state: 42
+        data.test_size: 0.2
+        model.catboost.params:
+          loss_function: Logloss
+          eval_metric: AUC
+          iterations: 1000
+          learning_rate: 0.05
+          depth: 6
+          random_seed: 42
+          thread_count: -1
+          verbose: false
+          auto_class_weights: Balanced
+        model.lightgbm.params:
+          objective: binary
+          metric: binary_logloss
+          n_estimators: 1000
+          learning_rate: 0.05
+          num_leaves: 31
+          subsample: 0.8
+          colsample_bytree: 0.8
+          random_state: 42
+          n_jobs: -1
+          class_weight: balanced
+        model.xgboost.params:
+          objective: binary:logistic
+          eval_metric: logloss
+          n_estimators: 300
+          learning_rate: 0.05
+          max_depth: 4
+          min_child_weight: 1
+          subsample: 0.8
+          colsample_bytree: 0.8
+          n_jobs: -1
+          tree_method: hist
+          random_state: 42
+          enable_categorical: true
+          scale_pos_weight: 0.6
     outs:
     - path: models/
       hash: md5
-      md5: 656accd6ddc40bb29cbf5df7d1f33def.dir
+      md5: 07846571155f632d3bc529c58c5a345e.dir
       size: 1213558
       nfiles: 1
     - path: reports/metrics.json

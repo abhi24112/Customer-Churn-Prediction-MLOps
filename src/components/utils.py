@@ -1,13 +1,17 @@
 import yaml
 import os
 
-def load_config(path: str = os.path.join(os.getcwd(), "config/config.yaml")):
+def load_config(config_path: str = os.path.join(os.getcwd(), "config/config.yaml"), 
+                param_path: str = os.path.join(os.getcwd(), "params.yaml")):
     try:
-        with open(path, "r") as file:
+        with open(config_path, "r") as file:
             config = yaml.safe_load(file)
             mlflow_config = config['mlflow']
-            data_split_config = config['data']
-            models_config = config["model"]
+        
+        with open(param_path, "r") as file:
+            params = yaml.safe_load(file)
+            data_split_config = params['data']
+            models_config = params["model"]
 
             return mlflow_config, data_split_config, models_config
 

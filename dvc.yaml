@@ -19,6 +19,13 @@ stages:
       - src/components/evaluate.py
       - src/components/model_saving.py
       - src/components/utils.py
+    params:
+      - params.yaml:
+        - data.test_size
+        - data.random_state
+        - model.xgboost.params
+        - model.catboost.params
+        - model.lightgbm.params
     outs:
       - models/
       - reports/metrics.json

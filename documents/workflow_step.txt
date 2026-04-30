@@ -22,6 +22,10 @@
 6. DVC (IMPORTANT PART - MAIN SOURCE)
     - ingestion → loading → preprocessing → splitting → training → evaluation
     - Creating `dvc.yaml`
+    - After creating dvc.yaml run: dvc repro
+    - Then run : dvc remote add -d localremote ./dvc_storage, 
+        - if have cloud :  dvc remote add -d cloudremote s3:/......
+    - To add data to remote: dvc push
 
 
 
