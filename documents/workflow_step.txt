@@ -11,6 +11,12 @@
 
 5. DVC Initialize : dvc init (requires git)
 
+    steps:  git init
+            dvc init
+            dvc add src/data/raw_data
+            git add .
+            git commit -m "Initialize project with DVC"
+
 6. 
 
 
