@@ -1,0 +1,50 @@
+1. Create src/components: hold entire ETL, model trainig, saving code
+
+2. Create src/model_config: config.yaml file -> have all the configuration for model , mlflow etc.
+
+3. Create src/pipelines: contains -> 
+    a. training_pipline.py : that run the entire components of the ETL, and model training using component folder files
+
+    b. tuning_pipeline.py : This will do the model hyperparameter tuning.
+
+4. Git Initialize : git init (before dvc init)
+
+5. DVC Initialize : dvc init (requires git)
+
+6. 
+
+
+2. create file: pyproject.toml
+
+3. Initialize Git Repo: git init, git add . git commit -m "Initial commit"
+
+4. Initializing DVC : dvc init
+
+5. add the src/data/raw_data: to store the raw_data that we want to work with
+
+6. Add the DVC Tracking: dvc add src/data/raw_data/ then push code to git repo
+
+7. Create the code for data reading, data loading, model training, evalution , saving etc... 
+
+8. Now, Use MLFLOW for tracking the model and artifacts
+
+    a. set_tracking uri
+    b. get_experiment_by_name: check if experiment exists if not create it using "creat_experiment" if already created get experiment id: "experiment.experiment_id"
+
+    c. set_experiment(experiment_id)
+
+
+NOTE: 0.80 F1 is not achievable on this dataset, even with duration.
+The UCI bank dataset has a known published benchmark ceiling. Top Kaggle solutions with full feature engineering, ensembles, and SMOTE land at 0.68–0.72 F1. Nobody breaks 0.75 cleanly on this data.
+Why:
+
+11.7% positive rate is brutal
+poutcome=unknown for 82% of records kills the strongest real predictor
+After duration, no other feature has strong discriminative power
+The remaining features (age, balance, job) have massive overlap between yes/no classes
+
+What would realistically we can get to 0.68–0.72:
+
+Better data — if you had more historical campaign records with known poutcome, the model would improve significantly. The unknown bucket is the real ceiling.
+Ensemble — stack XGBoost + LightGBM + CatBoost and use a meta-learner. Realistically adds +2–4% F1.
+Calibrated threshold per segment — different thresholds for poutcome=unknown vs known records.
