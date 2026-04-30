@@ -71,7 +71,6 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     for col in cat_col:
         feature_df[col] = feature_df[col].astype('category')
 
-
     # samples
     new_features = ['TotalServices', 'ChargePerService', 'IsNewCustomer', 'IsLongTerm', 'TenureGroup']
 

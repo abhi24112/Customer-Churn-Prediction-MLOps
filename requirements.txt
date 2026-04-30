@@ -1,0 +1,34 @@
+# Core ML / data
+numpy
+pandas
+scikit-learn
+xgboost
+catboost
+lightgbm
+optuna
+
+# airflow
+astro
+
+# Experiment tracking
+mlflow
+
+# Utilities
+PyYAML
+openpyxl
+joblib
+setuptools==81.0.0
+
+# Artifacts / plots
+matplotlib
+seaborn
+
+# Orchestration helpers (used by the example DAG)
+requests
+pendulum
+
+# MLOps (CLI + data versioning)
+dvc
+
+# Tests
+pytest

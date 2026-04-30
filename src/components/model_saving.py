@@ -1,5 +1,6 @@
 import joblib as jb
 import logging
+import json
 import os
 
 def save_model(model_name:str, run_name:str, model, f1_score):
@@ -21,7 +22,14 @@ def save_model(model_name:str, run_name:str, model, f1_score):
         logging.warning(f"Model F1 {f1_score*100:.2f}% below threshold. Not saving {run_name}_{model_name}")
         return False
     
+def save_metrics(metrics:dict):
+    os.makedirs("reports", exist_ok=True)
     
+    with open("reports/metrics.json", "w") as f:
+        json.dump(metrics,f, indent=4)
+
+    return True
+
 
 
 
