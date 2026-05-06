@@ -21,12 +21,35 @@
 
 6. DVC (IMPORTANT PART - MAIN SOURCE)
     - ingestion → loading → preprocessing → splitting → training → evaluation
-    - Creating `dvc.yaml`
+    - Creating `dvc.yaml` -> Add params.yaml, and pipelines so, if any model parameters or pipline code changes dvc repro will run that part again.
     - After creating dvc.yaml run: dvc repro
     - Then run : dvc remote add -d localremote ./dvc_storage, 
         - if have cloud :  dvc remote add -d cloudremote s3:/......
     - To add data to remote: dvc push
+    - Check the DAG : dvc dag
+        -   +-----------------------+  
+            | src\data\raw_data.dvc |  
+            +-----------------------+  
+                        *              
+                        *              
+                        *              
+            +--------------------+   
+            | data_preprocessing |   
+            +--------------------+   
+                        *              
+                        *              
+                        *              
+                  +----------+         
+                  | training |         
+                  +----------+  
 
+7. Airflow Integration
+    - Airflow = pipeline ❌
+        - Now correct approach:
+            DVC = pipeline
+            Airflow (Astro) = scheduler/orchestrator
+    
+    - 
 
 
 
