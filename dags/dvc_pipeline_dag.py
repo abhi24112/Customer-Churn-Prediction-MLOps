@@ -21,7 +21,7 @@ with DAG(
     # Run full pipeline
     dvc_repro = BashOperator(
         task_id = "run_dvc_pipeline",
-        bash_command="cd /usr/local/airflow && git config --global --add safe.directory /usr/local/airflow && dvc repro"
+        bash_command="cd /usr/local/airflow && git config --global --add safe.directory /usr/local/airflow && dvc repro -f db_snapshot && dvc repro training"
     )
 
     # Pushing results (model and metrics) to remote

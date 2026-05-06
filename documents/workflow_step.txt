@@ -49,44 +49,115 @@
             DVC = pipeline
             Airflow (Astro) = scheduler/orchestrator
     
-    - 
+    - Astro manages both Airflow orchestration + Docker container lifecycle
+    - DAG runs: dvc repro -f db_snapshot && dvc repro training
+    - DAG structure: dvc pull → db_snapshot → training → dvc push
 
+8. PostgreSQL Setup (Source of Truth for Data)
+    - Install PostgreSQL (local via docker-compose or cloud RDS/Azure)
+    - Postgres is the live data store, NOT csv files
+    - Architecture:
+        Postgres → db_snapshot (DVC stage) → snapshot CSV → DVC pipeline
+    
+    Steps:
+        docker-compose up -d  (starts postgres:16-alpine on localhost:5433)
+        
+    One-time bootstrap (load Kaggle CSV into Postgres):
+        $env:DATABASE_URL='postgresql://postgres:postgres@localhost:5433/churn'
+        python -m backend.scripts.load_csv_to_postgres
+        
+    Add rows to Postgres (for new data):
+        from backend.postgres import insert_row
+        row = {"col1": "val1", "col2": "val2", ...}
+        insert_row("churn_raw", row)
 
+9. DVC Pipeline Update (Postgres Integration)
+    - New `db_snapshot` stage added to dvc.yaml
+    - Flow: Postgres → src/data/raw_data/data.csv → preprocessing → training
+    - Why: DVC can't detect DB changes automatically, so snapshot exports current state
+    
+    Key files:
+        backend/postgres.py : connection + insert helpers
+        src/pipelines/db_snapshot_pipeline.py : exports Postgres → CSV
+        src/components/data_ingestion.py : reads from snapshot (cross-platform paths)
+    
+    DVC stages now:
+        db_snapshot → data_preprocessing → training
+        (use `-f` to force snapshot refresh when DB changes)
 
+10. Docker & Astro Container Setup
+    - Dockerfile: based on astrocrpublic.azurecr.io/runtime:3.2-3
+    - Adds libgomp1 (needed for LightGBM inside containers)
+    
+    Steps:
+        docker build -t churn-astro .  (test build locally)
+        astro dev start  (starts Airflow + all services)
 
+11. Configuration & Environment (IMPORTANT)
+    - Create .env in project root (copy from .env.example)
+    - Set variables:
+        DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5433/churn
+        (use host.docker.internal so Airflow container can reach host Postgres)
+    
+    - config/config.yaml: MLflow now uses relative "mlruns" path (portable)
+        tracking_uri: "mlruns"  (works local + containers)
 
+12. First Run & Test
+    Steps (local, before Airflow):
+        conda activate mlopsenv
+        docker-compose up -d
+        $env:DATABASE_URL='postgresql://postgres:postgres@localhost:5433/churn'
+        python -m backend.scripts.load_csv_to_postgres
+        dvc repro -f db_snapshot
+        dvc repro
+    
+    Expected:
+        ✅ Postgres loads CSV into churn_raw
+        ✅ db_snapshot exports snapshot CSV
+        ✅ data_preprocessing runs
+        ✅ training runs
+        ✅ models/ and reports/metrics.json created
+        ✅ mlruns/ folder with experiment logs
 
-Project Structure: 
-project_root/
-│
-├── src/
-│   ├── data/
-│   │   ├── raw/
-│   │   ├── processed/
-│   │
-│   ├── pipelines/        # orchestrated steps
-│   │   ├── training_pipeline.py
-│   │
-│   ├── components/       # reusable logic
-│   │   ├── data_ingestion.py
-│   │   ├── data_processing.py
-│   │   ├── model_training.py
-│   │   ├── evaluation.py
-│   │
-│   ├── utils/
-│
-├── config/
-│   ├── config.yaml
-│
-├── dvc.yaml              # DVC pipeline definition
-├── params.yaml           # hyperparameters
-│
-├── dags/                 # airflow DAGs
-│
-├── models/
-├── notebooks/
-├── tests/
-│
-├── Dockerfile
-├── requirements.txt
-├── mlruns/
+13. Airflow Daily Operations (astro dev start)
+    - DAG: Customer_Churn_DVC_pipeline
+    - Schedule: @daily (runs every day at UTC midnight)
+    - Tasks:
+        dvc_pull_data → run_dvc_pipeline (db_snapshot + training) → dvc_push_result
+    
+    Workflow each day:
+        1. Pull latest code + data from DVC remote
+        2. Force refresh snapshot from Postgres
+        3. Run preprocessing + training
+        4. Push new models/metrics to remote
+    
+    Monitoring:
+        Airflow UI: http://localhost:8080
+        Check logs if DAG fails
+        Verify dvc.lock updates after each run
+
+14. Adding New Data (Production Use Case)
+    - When new customer records arrive:
+        INSERT INTO public.churn_raw (...) VALUES (...);
+        (or batch insert via backend.postgres.insert_rows)
+    
+    - Next DAG run automatically:
+        Refreshes snapshot from Postgres
+        Reruns preprocessing if snapshot changed
+        Retrains model
+        Pushes new artifacts
+
+15. Git Workflow (Keep Everything Versioned)
+    - Track with git:
+        git add .
+        git commit -m "Stage name/feature"
+        git push
+    
+    - DVC tracks:
+        models/, reports/metrics.json (via dvc push)
+        dvc.lock (model lineage snapshot)
+    
+    - Reproduce anytime:
+        git clone <repo>
+        dvc pull  (restores models/data)
+        dvc repro (reruns pipeline if needed)

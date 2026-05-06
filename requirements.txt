@@ -30,5 +30,8 @@ pendulum
 # MLOps (CLI + data versioning)
 dvc
 
+# Database (Postgres snapshot -> CSV)
+psycopg2-binary
+
 # Tests
 pytest

@@ -206,6 +206,57 @@ cd "Customer Churn Predictions"
 pip install -r requirements.txt
 ```
 
+### 3. Postgres → Snapshot CSV → DVC (New Data Flow)
+
+This project supports a simple, production-friendly flow:
+
+Postgres → `db_snapshot` stage exports `src/data/raw_data/data.csv` → DVC versions the snapshot → preprocessing/training run as-is.
+
+#### A) Start PostgreSQL (local)
+
+```bash
+docker-compose up -d
+```
+
+#### B) Activate your conda env
+
+```bash
+conda activate mlopsenv
+```
+
+#### C) Set the database connection
+
+- Windows PowerShell:
+
+```powershell
+$env:DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/churn'
+```
+
+You can also copy `.env.example` to `.env` for convenience.
+
+#### D) One-time: load Kaggle CSV into Postgres
+
+Point `RAW_CSV_PATH` to your Kaggle CSV (default is `src/data/raw_data/data.csv`):
+
+```powershell
+$env:RAW_CSV_PATH = 'src/data/raw_data/data.csv'
+python -m backend.scripts.load_csv_to_postgres
+```
+
+This creates/overwrites the raw table `public.churn_raw`.
+
+#### E) Export a snapshot CSV (DVC stage)
+
+```bash
+dvc repro -f db_snapshot
+```
+
+#### F) Run the full ML pipeline
+
+```bash
+dvc repro
+```
+
 ### 3. Run the ML Pipeline
 
 ```bash
@@ -247,7 +298,7 @@ docker run -v $(pwd)/data:/app/data bank-churn-prediction:latest python main.py
 ### Multi-Container Setup (Ready)
 
 ```bash
-docker-compose up --build
+docker-compose up -d
 ```
 
 (Extend `docker-compose.yml` to include PostgreSQL, MLflow, Airflow services as needed)
@@ -336,6 +387,15 @@ dvc init --force
 dvc status
 ```
 
+### Postgres Snapshot Not Updating
+
+DVC can’t automatically detect changes inside Postgres.
+Use the forced stage run:
+
+```bash
+dvc repro -f db_snapshot
+```
+
 ### Model Training Fails
 
 - Check `params.yaml` for valid hyperparameters
@@ -346,6 +406,11 @@ dvc status
 
 - Ensure `dags/` contains valid Python files
 - Check `airflow_settings.yaml` for configuration issues
+
+### Airflow + Postgres
+
+The DAG runs `dvc repro -f db_snapshot` so it always refreshes the snapshot.
+Make sure the Airflow runtime has `DATABASE_URL` set (via Astro env, `.env`, or container env vars).
 
 ---
 

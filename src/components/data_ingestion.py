@@ -1,7 +1,7 @@
 import logging 
 import os
 
-def reading_files(data_dir: str = r"src\data\raw_data" ) -> str:
+def reading_files(data_dir: str = os.path.join("src", "data", "raw_data")) -> str:
 
     """
     ### This function is used to return the file location of the dataset
@@ -10,6 +10,9 @@ def reading_files(data_dir: str = r"src\data\raw_data" ) -> str:
     valid_data = ['csv', 'xlsx']
 
     files = []
+
+    if not os.path.isdir(data_dir):
+        raise FileNotFoundError(f"Data directory not found: {data_dir}")
 
     for i in os.listdir(data_dir):
         if i.split(".")[-1] in valid_data:
@@ -23,4 +26,4 @@ def reading_files(data_dir: str = r"src\data\raw_data" ) -> str:
         logging.info("Multiple files are present in the location")
         raise ValueError("Multiple files of csv or xlsx are present in the location")
 
-    return os.path.join(data_dir,files[0])
+    return os.path.join(data_dir, files[0])

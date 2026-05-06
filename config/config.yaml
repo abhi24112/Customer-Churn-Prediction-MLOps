@@ -1,5 +1,5 @@
 mlflow:
-  tracking_uri: "file:///C:/Users/Abhishek/Desktop/MLOps/Customer Churn Prediction/mlruns"
+  tracking_uri: "mlruns"
   experiment_name: Bank_Churn_Predictions
   tuning_experiment_name: Bank_Churn_Predictions_HPT
   run_name: "baseline_bank_churn_model"
