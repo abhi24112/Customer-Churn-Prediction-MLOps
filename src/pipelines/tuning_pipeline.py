@@ -79,15 +79,18 @@ def _xgb_search_space(trial: optuna.Trial, raw_ratio: float, random_state: int) 
 def _cat_search_space(trial: optuna.Trial, random_state: int) -> Dict[str, Any]:
     return {
         "loss_function": "Logloss",
-        "eval_metric": "AUC",
-        "iterations": trial.suggest_int("iterations", 100, 1000, step=50),
-        "learning_rate": trial.suggest_float("learning_rate", 1e-2, 2e-1, log=True),
+        "eval_metric": "F1",  # Optimizing directly for F1
+        "iterations": trial.suggest_int("iterations", 500, 2000),
+        "learning_rate": trial.suggest_float("learning_rate", 1e-3, 1e-1, log=True),
         "depth": trial.suggest_int("depth", 4, 10),
-        "l2_leaf_reg": trial.suggest_float("l2_leaf_reg", 1.0, 20.0, log=True),
+        "l2_leaf_reg": trial.suggest_float("l2_leaf_reg", 1.0, 10.0, log=True),
+        "bootstrap_type": trial.suggest_categorical("bootstrap_type", ["Bayesian", "Bernoulli", "MVS"]),
+        "grow_policy": trial.suggest_categorical("grow_policy", ["SymmetricTree", "Depthwise", "Lossguide"]),
         "random_seed": random_state,
         "thread_count": -1,
         "verbose": False,
         "auto_class_weights": "Balanced",
+        "early_stopping_rounds": 50
     }
 
 
@@ -208,10 +211,11 @@ def tuning(max_evals: int = MAX_EVALS):
                 y_test=y_val,
                 threshold=0.5,
                 optimize_threshold=True,
+                beta=0.5, # Optimizing for Precision
             )
 
-            f1 = float(metrics["f1"])
-            loss = 1.0 - f1
+            f_beta = float(metrics["f_beta"])
+            loss = 1.0 - f_beta
 
             mlflow.log_params(params)
             mlflow.log_metrics(
@@ -219,7 +223,8 @@ def tuning(max_evals: int = MAX_EVALS):
                     "val_accuracy": metrics["accuracy"],
                     "val_precision": metrics["precision"],
                     "val_recall": metrics["recall"],
-                    "val_f1": f1,
+                    "val_f1": metrics["f1"],
+                    "val_f_beta": f_beta,
                     "val_pr_auc": metrics["pr_auc"],
                     "val_threshold": metrics["threshold"],
                 }

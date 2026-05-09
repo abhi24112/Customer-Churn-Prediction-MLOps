@@ -19,21 +19,25 @@ model:
       tree_method: "hist"
       random_state: 42
       enable_categorical: true
-      scale_pos_weight: 0.6
+      scale_pos_weight: 2.78
 
   catboost:
     model_status: true
-    hpt_enabled: true
+    hpt_enabled: false
     params:
       loss_function: "Logloss"
-      eval_metric: "AUC"
-      iterations: 1000
-      learning_rate: 0.05
-      depth: 6
+      eval_metric: "F1"
+      iterations: 1754
+      learning_rate: 0.07966
+      depth: 4
+      l2_leaf_reg: 8.8768
+      bootstrap_type: "Bernoulli"
+      grow_policy: "SymmetricTree"
       random_seed: 42
       thread_count: -1
       verbose: false
       auto_class_weights: "Balanced"
+      early_stopping_rounds: 50
 
   lightgbm:
     model_status: true

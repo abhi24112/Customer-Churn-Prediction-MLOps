@@ -37,6 +37,7 @@ def evaluate_model(
     *,
     threshold: float = 0.5,
     optimize_threshold: bool = False,
+    beta: float = 1.0,
 ):
     
     try:
@@ -49,10 +50,12 @@ def evaluate_model(
             precision_curve, recall_curve, thresholds = precision_recall_curve(y_test, y_prob)
 
             if len(thresholds) > 0:
-                f1_curve = (2 * precision_curve[:-1] * recall_curve[:-1]) / (
-                    precision_curve[:-1] + recall_curve[:-1] + 1e-12
+                # F-beta optimization
+                # F_beta = (1 + beta^2) * (precision * recall) / ((beta^2 * precision) + recall)
+                f_beta_curve = (1 + beta**2) * (precision_curve[:-1] * recall_curve[:-1]) / (
+                    (beta**2 * precision_curve[:-1]) + recall_curve[:-1] + 1e-12
                 )
-                best_idx = int(f1_curve.argmax())
+                best_idx = int(f_beta_curve.argmax())
                 chosen_threshold = float(thresholds[best_idx])
 
         # Predictions (thresholded)
@@ -62,6 +65,15 @@ def evaluate_model(
         precision_metric = precision_score(y_test, y_pred, zero_division=0)
         recall_metric = recall_score(y_test, y_pred, zero_division=0)
         accuracy_metric = accuracy_score(y_test, y_pred)
+        
+        # Calculate F-beta score
+        if (precision_metric + recall_metric) > 0:
+            f_beta_metric = (1 + beta**2) * (precision_metric * recall_metric) / (
+                (beta**2 * precision_metric) + recall_metric
+            )
+        else:
+            f_beta_metric = 0.0
+
         f1_metric = f1_score(y_test, y_pred, zero_division=0)
         pr_auc = average_precision_score(y_test, y_prob)
         cm = confusion_matrix(y_test, y_pred)
@@ -96,6 +108,7 @@ def evaluate_model(
             "precision": float(precision_metric),
             "recall": float(recall_metric),
             "f1": float(f1_metric),
+            "f_beta": float(f_beta_metric),
             "pr_auc": float(pr_auc),
             "threshold": float(chosen_threshold),
         }

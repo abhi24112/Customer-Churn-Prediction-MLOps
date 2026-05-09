@@ -68,8 +68,10 @@ def run_training():
                         x_test=x_test,
                         y_test=y_test,
                         threshold=0.5,  
-                        optimize_threshold=False,
+                        optimize_threshold=True,
+                        beta=0.5,
                     )
+                    logging.info(f"Metrics for {name}: {metrics}")
 
                     # Saving the model
                     saved = save_model(

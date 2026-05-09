@@ -56,6 +56,30 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     # long term contract
     feature_df['IsLongTerm'] = (feature_df['Contract'] != 'Month-to-month').map({True: 'Yes', False: 'No'})
 
+        # Fiber Optic is a high churn risk in Telco dataset
+    if 'InternetService' in feature_df.columns:
+        feature_df['Has_FiberOptic'] = (feature_df['InternetService'] == 'Fiber optic').map({True: 'Yes', False: 'No'})
+    
+    # Streaming interaction
+    if 'StreamingTV' in feature_df.columns and 'StreamingMovies' in feature_df.columns:
+        feature_df['StreamingInteraction'] = ((feature_df['StreamingTV'] == 'Yes') & (feature_df['StreamingMovies'] == 'Yes')).map({True: 'Yes', False: 'No'})
+
+    # Risk factors for churn
+    # Fiber optic + No Online Security is a classic high-risk combo
+    if all(col in feature_df.columns for col in ['InternetService', 'OnlineSecurity', 'Contract']):
+        feature_df['HighRisk_Combo'] = (
+            (feature_df['InternetService'] == 'Fiber optic') & 
+            (feature_df['OnlineSecurity'] == 'No') &
+            (feature_df['Contract'] == 'Month-to-month')
+        ).map({True: 'Yes', False: 'No'})
+    
+    # Loyalty factor
+    if all(col in feature_df.columns for col in ['Contract', 'TechSupport']):
+        feature_df['Loyalty_Factor'] = (
+            (feature_df['Contract'] != 'Month-to-month') & 
+            (feature_df['TechSupport'] == 'Yes')
+        ).map({True: 'Yes', False: 'No'})
+
     # Tenure Grouping
     feature_df['TenureGroup'] = pd.cut(
         feature_df['tenure'],
