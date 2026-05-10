@@ -46,104 +46,64 @@ This project is a complete **MLOps pipeline** to predict whether a bank customer
 | Python 3.x     | Core programming language                    |
 | DVC            | Data & model versioning                      |
 | CatBoost       | Gradient boosting model training             |
-| Airflow        | Pipeline orchestration & scheduling          |
+| Airflow (Astro)| Pipeline orchestration & scheduling          |
 | Docker         | Containerization & reproducible environments |
+| MLflow         | Experiment tracking & model registry         |
+| Evidently AI   | Data drift detection & model monitoring      |
+| PostgreSQL     | Live data store (Source of Truth)            |
 | Scikit-learn   | Data preprocessing & evaluation metrics      |
 | Pandas & NumPy | Data manipulation & analysis                 |
-| Jupyter        | Interactive notebooks for EDA                |
-| MLflow         | Model tracking (ready to integrate)          |
 
 ---
 
 ## Data Overview
 
-**Bank Marketing Dataset**
+**Bank Marketing Dataset** (Managed via PostgreSQL)
 
 - **Source**: UCI Bank Marketing Dataset
 - **Target**: Customer subscription to term deposit (binary classification)
 - **Size**: ~45K records, 16 features + 1 target
-- **Location**: `src/data/raw_data/data.csv`
-
-### Key Features:
-
-| Feature   | Type       | Description                     |
-| --------- | ---------- | ------------------------------- |
-| age       | Numeric    | Customer age                    |
-| job       | Category   | Employment type                 |
-| marital   | Category   | Marital status                  |
-| education | Category   | Education level                 |
-| default   | Binary     | Credit default status           |
-| balance   | Numeric    | Account balance                 |
-| housing   | Binary     | Has housing loan                |
-| loan      | Binary     | Has personal loan               |
-| contact   | Category   | Contact type                    |
-| duration  | Numeric    | Call duration (seconds)         |
-| campaign  | Numeric    | Number of campaign contacts     |
-| pdays     | Numeric    | Days since previous contact     |
-| previous  | Numeric    | Previous campaign contacts      |
-| poutcome  | Category   | Previous campaign outcome       |
-| **y**     | **Binary** | **Target: Subscribed (yes/no)** |
+- **Live Store**: PostgreSQL (`churn_raw` table)
+- **Pipeline Source**: `src/data/raw_data/data.csv` (DVC snapshot)
 
 ---
 
 ## ML Pipeline Architecture
 
 ```
-Raw Data
+PostgreSQL (Live Data)
    ↓
-[Data Ingestion] - src/components/data_ingestion.py
+[DB Snapshot] - DVC stage: exports CSV from Postgres
    ↓
-[Data Preprocessing] - src/components/data_preprocessing.py
+[Data Preprocessing] - DVC stage: cleaning & feature engineering
    ↓
-[Data Splitting] - src/components/data_splitting.py
-   ├─→ Training Set
-   ├─→ Validation Set
-   └─→ Test Set
+[Drift Detection] - Evidently AI: compares Current vs Reference data
    ↓
-[Model Training] - src/components/model_training.py
+[Branching Logic] - Airflow: decides if retraining is needed
    ↓
-[Model Evaluation] - src/components/evaluate.py
+[Model Training] - DVC stage: Retrains ONLY if drift is detected
    ↓
-[Model Registry] - src/components/model_saving.py
-   ↓
-Ready for Serving/Inference
+[Evaluation & MLflow] - Logs metrics, plots, and models
 ```
 
 ---
 
 ## Core Components
 
-### 1. Data Ingestion (`src/components/data_ingestion.py`)
-
-- Loads raw data from CSV
-- Initial data validation and schema checks
+### 1. Data Ingestion & Snapshot (`src/pipelines/db_snapshot_pipeline.py`)
+- Pulls live data from PostgreSQL.
+- Versions the snapshot using DVC to ensure reproducibility.
 
 ### 2. Data Preprocessing (`src/components/data_preprocessing.py`)
+- Handles missing values, categorical encoding, and feature scaling.
 
-- Handles missing values
-- Categorical encoding (one-hot, label encoding)
-- Feature scaling and normalization
+### 3. Drift Monitoring (`src/drift_detection/evidenly_monitoring.py`)
+- Uses **Evidently AI** to detect feature and target drift.
+- Returns a boolean status to trigger conditional workflows.
 
-### 3. Data Splitting (`src/components/data_splitting.py`)
-
-- Splits data into train/test/validation sets
-- Maintains class distribution (stratified split)
-
-### 4. Model Training (`src/components/model_training.py`)
-
-- CatBoost model training with hyperparameter tuning
-- Logs training metrics & loss curves
-
-### 5. Model Evaluation (`src/components/evaluate.py`)
-
-- Classification metrics (accuracy, precision, recall, F1, AUC)
-- Confusion matrix & ROC curves
-- Performance reporting
-
-### 6. Model Saving (`src/components/model_saving.py`)
-
-- Saves trained model to `models/` directory
-- Exports in joblib (.jbl) format
+### 4. Model Training & Tracking (`src/pipelines/training_pipeline.py`)
+- Trains CatBoost, XGBoost, or LightGBM based on `params.yaml`.
+- Fully integrated with **MLflow** for tracking experiments, parameters, and artifacts.
 
 ---
 
@@ -151,187 +111,52 @@ Ready for Serving/Inference
 
 Located in `dags/`:
 
-| DAG Name           | Frequency | Purpose                             |
-| ------------------ | --------- | ----------------------------------- |
-| `dvc_pipeline_dag` | Scheduled | Orchestrates DVC pipeline execution |
-| `exampledag`       | Example   | Reference DAG structure             |
+| DAG Name                      | Frequency | Purpose                                              |
+| ----------------------------- | --------- | ---------------------------------------------------- |
+| `conditional_retraining_logic`| Scheduled | **Smart Pipeline**: Drift check -> Conditional Retrain|
+| `dvc_pipeline_dag`            | Daily     | Standard DVC pull -> repro -> push cycle            |
 
-DAGs handle:
-
-- Triggering data pipeline stages
-- Model retraining on schedule
-- Logging & error handling
-- Integration with DVC pipeline
-
----
-
-## DVC Pipeline
-
-The reproducible ML pipeline is defined in `dvc.yaml` and `params.yaml`.
-
-### Running the Pipeline:
-
-```bash
-# View pipeline stages
-dvc dag
-
-# Run full pipeline
-dvc repro
-
-# Run specific stage
-dvc repro src/components/data_ingestion.py
-```
-
-### Parameters (`params.yaml`):
-
-Centralized configuration for:
-
-- Train/test split ratios
-- Model hyperparameters (learning rate, depth, iterations)
-- Feature engineering settings
+### Conditional Retraining Flow:
+1. **Update Data**: Refresh DB snapshot and preprocess data.
+2. **Check Drift**: Run Evidently monitoring.
+3. **Branch**: 
+   - If Drift > 50%: Trigger `dvc repro training`.
+   - If No Drift: Skip training and finish.
 
 ---
 
 ## Getting Started
 
-### 1. Clone & Setup
-
-```bash
-cd "Customer Churn Predictions"
-```
-
-### 2. Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Postgres → Snapshot CSV → DVC (New Data Flow)
-
-This project supports a simple, production-friendly flow:
-
-Postgres → `db_snapshot` stage exports `src/data/raw_data/data.csv` → DVC versions the snapshot → preprocessing/training run as-is.
-
-#### A) Start PostgreSQL (local)
-
-```bash
-docker-compose up -d
-```
-
-#### B) Activate your conda env
-
+### 1. Setup Environment
 ```bash
 conda activate mlopsenv
+docker-compose up -d  # Start Postgres
 ```
 
-#### C) Set the database connection
-
-- Windows PowerShell:
-
+### 2. Initialize Data
 ```powershell
-$env:DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/churn'
+$env:DATABASE_URL='postgresql://postgres:postgres@localhost:5433/churn'
+python -m backend.scripts.load_csv_to_postgres  # Load initial data
 ```
 
-You can also copy `.env.example` to `.env` for convenience.
-
-#### D) One-time: load Kaggle CSV into Postgres
-
-Point `RAW_CSV_PATH` to your Kaggle CSV (default is `src/data/raw_data/data.csv`):
-
-```powershell
-$env:RAW_CSV_PATH = 'src/data/raw_data/data.csv'
-python -m backend.scripts.load_csv_to_postgres
-```
-
-This creates/overwrites the raw table `public.churn_raw`.
-
-#### E) Export a snapshot CSV (DVC stage)
-
+### 3. Run the Smart Pipeline (Astro)
 ```bash
-dvc repro -f db_snapshot
+astro dev start
 ```
-
-#### F) Run the full ML pipeline
-
-```bash
-dvc repro
-```
-
-### 3. Run the ML Pipeline
-
-```bash
-# Using DVC
-dvc repro
-
-# Or run main script
-python main.py
-```
-
-### 4. Train Model
-
-```bash
-python src/pipelines/training_pipeline.py
-```
-
-### 5. Evaluate Model
-
-```bash
-python src/components/evaluate.py
-```
-
----
-
-## Docker Setup
-
-### Build Docker Image
-
-```bash
-docker build -t bank-churn-prediction:latest .
-```
-
-### Run in Container
-
-```bash
-docker run -v $(pwd)/data:/app/data bank-churn-prediction:latest python main.py
-```
-
-### Multi-Container Setup (Ready)
-
-```bash
-docker-compose up -d
-```
-
-(Extend `docker-compose.yml` to include PostgreSQL, MLflow, Airflow services as needed)
-
----
-
-## File Reference
-
-| File                             | Purpose                     |
-| -------------------------------- | --------------------------- |
-| `main.py`                        | Entry point script          |
-| `config/config.yaml`             | Global configuration        |
-| `dvc.yaml`                       | DVC pipeline stages         |
-| `params.yaml`                    | Model hyperparameters       |
-| `requirements.txt`               | Python package dependencies |
-| `Dockerfile`                     | Container image definition  |
-| `models/baseline_bank_churn_...` | Trained CatBoost model      |
-| `notebooks/Data Analysis.ipynb`  | EDA & exploratory analysis  |
-| `tests/dags/test_dag_example.py` | DAG tests                   |
+Go to `http://localhost:8080`, unpause `conditional_retraining_logic`, and trigger it.
 
 ---
 
 ## Next Steps (Production Readiness)
 
-- [ ] Integrate MLflow for experiment tracking
-- [ ] Add Prometheus + Grafana for monitoring
-- [ ] Implement data drift detection (Evidently)
+- [x] Integrate MLflow for experiment tracking
+- [x] Implement data drift detection (Evidently)
+- [x] Create Airflow branching logic for conditional retraining
+- [ ] Add Prometheus + Grafana for system monitoring
 - [ ] Add REST API (FastAPI) for model serving
 - [ ] Build Streamlit UI for predictions
 - [ ] Setup CI/CD with GitHub Actions
-- [ ] Add comprehensive unit & integration tests
-- [ ] Implement model versioning & registry
-- [ ] Setup PostgreSQL for production data logging
+- [ ] Implement model versioning & registry in MLflow
 
 ---
 

@@ -7,3 +7,4 @@ __pycache__/
 dvc_storage
 mlruns
 test.py
+GEMINI.md

@@ -4,6 +4,8 @@ from datetime import datetime
 # Operators
 from airflow.operators.bash import BashOperator # type: ignore
 
+PROJECT_ROOT = "/usr/local/airflow"
+
 with DAG(
     dag_id = "Customer_Churn_DVC_pipeline",
     description = "Run full ML pipeline using DVC Daily",

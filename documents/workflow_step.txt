@@ -147,17 +147,24 @@
         Retrains model
         Pushes new artifacts
 
-15. Git Workflow (Keep Everything Versioned)
-    - Track with git:
-        git add .
-        git commit -m "Stage name/feature"
-        git push
+16. Conditional Retraining & Drift Monitoring (Evidently AI)
+    - Goal: Retrain only when data drifts, not on every schedule.
+    - Components:
+        src/drift_detection/evidenly_monitoring.py : Runs drift check, returns True/False.
+        dags/conditional_retraining_logic.py : Airflow DAG with branching.
     
-    - DVC tracks:
-        models/, reports/metrics.json (via dvc push)
-        dvc.lock (model lineage snapshot)
-    
-    - Reproduce anytime:
-        git clone <repo>
-        dvc pull  (restores models/data)
-        dvc repro (reruns pipeline if needed)
+    Workflow:
+        1. Snapshot & Preprocessing (DVC)
+        2. check_drift (BranchPythonOperator)
+        3. if drift: run_retraining (dvc repro training)
+        4. else: skip_retraining (EmptyOperator)
+
+    Benefits:
+        - Saves compute costs.
+        - Ensures model is always fresh but not over-trained.
+        - Event-driven MLOps architecture.
+
+17. Conda Environment in Airflow
+    - All Airflow BashOperators must activate the environment first:
+    - Command: `conda activate mlopsenv && dvc repro ...`
+    - Ensures consistency between local development and orchestration.

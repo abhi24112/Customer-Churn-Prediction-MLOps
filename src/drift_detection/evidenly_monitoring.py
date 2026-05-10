@@ -13,25 +13,21 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # Paths
 REF_PATH = "src/data/reference_data/reference_data.csv"
 CUR_PATH = "src/data/processed/processed.csv"
-MODEL_PATH = "models/baseline_bank_churn_model_catboost.jbl"
 REPORT_DIR = "src/drift_detection/reports"
 HTML_REPORT_NAME = "evidently_drift_report.html"
 JSON_REPORT_NAME = "evidently_drift_report.json"
 
-def load_data_and_model(ref_path: str, cur_path: str, model_path: str) -> Tuple[pd.DataFrame, pd.DataFrame, object]:
+def load_data(ref_path: str, cur_path: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
     try:
         if not os.path.exists(ref_path):
             raise FileNotFoundError(f"Reference data not found at {ref_path}")
         if not os.path.exists(cur_path):
             raise FileNotFoundError(f"Current data not found at {cur_path}")
-        if not os.path.exists(model_path):
-            raise FileNotFoundError(f"Model file not found at {model_path}")
 
         ref_data = pd.read_csv(ref_path)
         cur_data = pd.read_csv(cur_path)
-        model = joblib.load(model_path)
-        logging.info("Data and model loaded successfully.")
-        return ref_data, cur_data, model
+        logging.info("Reference and Current data loaded successfully.")
+        return ref_data, cur_data
     except Exception as e:
         logging.error(f"Error loading files: {e}")
         raise
@@ -39,15 +35,12 @@ def load_data_and_model(ref_path: str, cur_path: str, model_path: str) -> Tuple[
 def run_evidently_monitoring():
     try:
         # 1. Load data
-        ref_df, curr_df, model = load_data_and_model(REF_PATH, CUR_PATH, MODEL_PATH)
+        ref_df, curr_df= load_data(REF_PATH, CUR_PATH)
 
         # 2. Define Columns
-        NUMERICAL_COLS = ['tenure', 'MonthlyCharges', 'TotalCharges']
+        NUMERICAL_COLS = ['SeniorCitizen', 'tenure', 'MonthlyCharges', 'TotalCharges', 'Churn', 'TotalServices', 'ChargePerService']
         CATEGORICAL_COLS = [
-            'gender', 'SeniorCitizen', 'Partner', 'Dependents', 'PhoneService',
-            'MultipleLines', 'InternetService', 'OnlineSecurity', 'OnlineBackup',
-            'DeviceProtection', 'TechSupport', 'StreamingTV', 'StreamingMovies',
-            'Contract', 'PaperlessBilling', 'PaymentMethod'
+            'gender', 'Partner', 'Dependents', 'PhoneService', 'MultipleLines', 'InternetService', 'OnlineSecurity', 'OnlineBackup', 'DeviceProtection', 'TechSupport', 'StreamingTV', 'StreamingMovies', 'Contract', 'PaperlessBilling', 'PaymentMethod', 'IsNewCustomer', 'IsLongTerm', 'TenureGroup'
         ]
 
         data_definition = DataDefinition(
@@ -104,7 +97,7 @@ def run_evidently_monitoring():
         else:
             logging.info("✅ No significant data drift detected.")
 
-        return report_data
+        return dataset_drift
 
     except Exception as e:
         logging.error(f"❌ Monitoring Pipeline Failed: {e}")
