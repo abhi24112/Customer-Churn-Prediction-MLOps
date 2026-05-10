@@ -1,8 +1,8 @@
-from airflow import DAG
+from airflow import DAG # type: ignore
 from datetime import datetime
 
 # Operators
-from airflow.operators.bash import BashOperator
+from airflow.operators.bash import BashOperator # type: ignore
 
 with DAG(
     dag_id = "Customer_Churn_DVC_pipeline",
