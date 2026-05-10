@@ -11,12 +11,15 @@ from xgboost import XGBClassifier
 from catboost import CatBoostClassifier
 from lightgbm import LGBMClassifier
 
-from src.components.data_ingestion import reading_files
-from src.components.data_loader import loading_files
-from src.components.data_preprocessing import preprocess
-from src.components.data_splitting import data_splitting
-from src.components.evaluate import evaluate_model
-from src.components.utils import load_config
+
+from src.components import (
+    data_splitting,
+    reading_files,
+    evaluate_model,
+    load_config,
+    loading_files,
+    preprocess
+)
 
 
 mlflow_config, data_split_config, models_config = load_config()

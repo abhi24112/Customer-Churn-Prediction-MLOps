@@ -4,11 +4,14 @@ import pandas as pd
 import logging
 
 # Import all scripts for model
-from src.components.data_splitting import data_splitting
-from src.components.model_training import model_training
-from src.components.evaluate import evaluate_model
-from src.components.model_saving import save_model, save_metrics
-from src.components.utils import load_config
+from src.components import (
+    data_splitting,
+    model_training,
+    evaluate_model,
+    save_model,
+    save_metrics,
+    load_config
+)
 
 logging.basicConfig(
     level=logging.INFO,

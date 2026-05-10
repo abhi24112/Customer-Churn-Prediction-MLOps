@@ -6,9 +6,11 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-from src.components.data_ingestion import reading_files
-from src.components.data_loader import loading_files
-from src.components.data_preprocessing import preprocess
+from src.components import (
+    reading_files,
+    loading_files,
+    preprocess
+)
 
 
 def run_preprocessing():
