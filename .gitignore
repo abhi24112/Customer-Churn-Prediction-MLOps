@@ -1,10 +1,38 @@
+# Byte-compiled / optimized / DLL files
 __pycache__/
-.vscode
-.env
-.logs
-/models
+*.py[cod]
+*$py.class
 
-dvc_storage
-mlruns
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+mlopsenv/
+
+# IDEs
+.vscode/
+.idea/
+
+# Project Specific
+.logs/
+/catboost_info/
+/reports/plots/
+/src/drift_detection/reports/*.html
+/src/drift_detection/reports/*.json
+
+# MLflow
+mlruns/
+
+# DVC local storage (if not using external remote)
+/dvc_storage/
+
+# Large data/models (tracked by DVC, but ignoring actual files)
+/models/
+/src/data/raw_data/*.csv
+/src/data/processed/*.csv
+
+# Temporary / Test files
 test.py
-GEMINI.md
+dummy_data_insert.py

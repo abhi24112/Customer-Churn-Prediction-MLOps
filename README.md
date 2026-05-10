@@ -1,7 +1,5 @@
 # Bank Customer Churn Prediction - MLOps Pipeline
 
-**Python · DVC · Docker · Airflow · CatBoost · MLflow (Ready)**
-
 ---
 
 ## Project Summary
@@ -65,6 +63,54 @@ This project is a complete **MLOps pipeline** to predict whether a bank customer
 - **Size**: ~45K records, 16 features + 1 target
 - **Live Store**: PostgreSQL (`churn_raw` table)
 - **Pipeline Source**: `src/data/raw_data/data.csv` (DVC snapshot)
+
+---
+
+## ⚙️ Project Flow Diagram
+
+```mermaid
+graph TD
+
+A1[Raw Data] --> A2[Preprocessing - src/]
+A2 --> A3[Data Ingestion - src/]
+A3 --> A4[Model Training - src/]
+A4 --> A5[Register Model + Artifacts - MLflow]
+
+%% FastAPI Serving
+A5 --> B1[Serve Model via FastAPI]
+
+%% Streamlit Interaction
+B1 --> C1[UI - Streamlit App]
+C1 --> C2[User Enters New Data]
+C2 --> C3[New Data Stored in PostgreSQL]
+
+%% Airflow ETL + Retrain
+C3 --> D1[Trigger Airflow DAG - etl_retarin_dag]
+D1 --> D2[Extract Script]
+D2 --> D3[Transform Script]
+D3 --> D4[Load Script]
+D4 --> D5[Retrain Script]
+D5 --> A5
+
+%% Drift Detection DAG
+C3 --> E1[Airflow DAG - drift_dag]
+E1 --> E2{Drift Detected?}
+E2 -->|Yes| D1
+E2 -->|No| F1[Continue Serving]
+
+%% Monitoring Stack
+B1 --> G1[Prometheus + Grafana - Real-time Monitoring]
+E1 --> G1
+
+%% CI/CD Automation
+H1[GitHub Actions CI Pipeline]
+H1 --> H2[Build & Test]
+H2 --> H3[Push Docker Image to DockerHub]
+H3 --> B1
+
+%% Output + Explainability
+C1 --> I1[Prediction Output + LLM Explainer]
+```
 
 ---
 
