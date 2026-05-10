@@ -15,21 +15,33 @@ with DAG(
     # Pulling the latest data from DVC remote
     dvc_pull = BashOperator(
         task_id = "dvc_pull_data",
-        bash_command="cd /usr/local/airflow && git config --global --add safe.directory /usr/local/airflow && dvc pull"
+        bash_command="""
+            cd /usr/local/airflow &&
+            git config --global --add safe.directory /usr/local/airflow &&
+            dvc pull
+        """
     )
 
     # Run full pipeline
     dvc_repro = BashOperator(
         task_id = "run_dvc_pipeline",
-        bash_command="cd /usr/local/airflow && git config --global --add safe.directory /usr/local/airflow && dvc repro -f db_snapshot && dvc repro training"
+        bash_command="""
+            cd /usr/local/airflow && 
+            git config --global --add safe.directory /usr/local/airflow && 
+            dvc repro -f db_snapshot && 
+            dvc repro training
+        """
     )
 
     # Pushing results (model and metrics) to remote
     dvc_push = BashOperator(
         task_id = "dvc_push_result",
-        bash_command="cd /usr/local/airflow && git config --global --add safe.directory /usr/local/airflow && dvc push"
+        bash_command="""
+            cd /usr/local/airflow && 
+            git config --global --add safe.directory /usr/local/airflow && 
+            dvc push
+        """
     )
-
     # Flow
     dvc_pull >> dvc_repro >> dvc_push
 
