@@ -7,20 +7,20 @@ This file contains the foundational architecture, workflows, and operational man
 - **Environment (Airflow/Docker):** DO NOT use `conda activate` in Airflow DAGs; dependencies are handled by the container's `requirements.txt`.
 - **Database Access:** When running locally, ensure `docker-compose up -d` is executed to start PostgreSQL.
 - **DVC Usage:** Use `dvc repro -f db_snapshot` to force a new data export from Postgres before running the pipeline.
-- **Airflow Orchestration:** Use the `conditional_retraining_logic` DAG for production-like, data-driven retraining.
+- **Airflow 3.x Compatibility:** Use the `schedule` argument instead of `schedule_interval`. Use modern provider paths (e.g., `airflow.providers.standard.operators`).
 
 ## 🏗️ Architecture Overview
 The project follows a "Live Data Store -> Versioned Snapshot -> Reproducible Pipeline" pattern.
 
 1. **Source of Truth:** PostgreSQL (`churn_raw` table).
 2. **Snapshot Stage:** `src/pipelines/db_snapshot_pipeline.py` (exports Postgres to `src/data/raw_data/data.csv`).
-3. **Data Versioning:** DVC manages snapshots, processed data, and model artifacts.
-4. **Monitoring:** **Evidently AI** (`src/drift_detection/evidenly_monitoring.py`) compares incoming data against the training reference to detect drift.
+3. **Clean Imports:** Package-level exports in `src/components/__init__.py` allow for streamlined `from src.components import (...)` statements.
+4. **Monitoring:** **Evidently AI** (`src/drift_detection/evidenly_monitoring.py`) compares incoming data against the training reference.
 5. **Conditional Retraining:** Airflow uses a `BranchPythonOperator` to trigger `dvc repro training` ONLY if drift is detected (>50% feature drift).
-6. **Tracking:** **MLflow** tracks all experiments, metrics, and models in a portable `mlruns` directory.
+6. **Tracking:** **MLflow** tracks all experiments in a portable `mlruns` directory.
 
 ## 🛠️ Tech Stack
-- **Orchestration:** Apache Airflow (via Astronomer/Astro CLI).
+- **Orchestration:** Apache Airflow (via Astronomer/Astro CLI 3.x).
 - **Pipeline:** DVC (Data Version Control).
 - **ML Engine:** CatBoost, XGBoost, LightGBM.
 - **Monitoring:** Evidently AI.
@@ -44,20 +44,17 @@ dvc repro
 - **UI:** `http://localhost:8080` (admin/admin)
 - **Primary DAG:** `conditional_retraining_logic` (Daily schedule + Drift-based branching).
 
-### 3. Adding New Data
-- Batch insert into Postgres -> Trigger DAG -> Automated Snapshot -> Automated Drift Check -> Conditional Retrain.
-
 ## 📂 Key File Map
-- `dags/conditional_retraining_dag.py`: The branching orchestrator.
+- `dags/conditional_retraining_dag.py`: The branching orchestrator (Airflow 3.x compatible).
 - `src/drift_detection/evidenly_monitoring.py`: The "brain" that decides if retraining is needed.
-- `src/pipelines/training_pipeline.py`: Main MLflow-integrated training logic.
+- `src/components/__init__.py`: Package-level exports for clean imports.
 - `dvc.yaml`: Defines stage dependencies and commands.
 - `params.yaml`: Centralized hyperparameters and split ratios.
-- `config/config.yaml`: Global MLflow and project configurations.
 
 ## 📝 Recent Progress (May 2026)
+- [x] Refactored component imports to use clean, package-level exports.
+- [x] Resolved Airflow 3.x parsing errors (schedule vs schedule_interval).
 - [x] Integrated PostgreSQL as the live data source.
 - [x] Implemented Evidently AI for data drift monitoring.
 - [x] Created an event-driven retraining DAG in Airflow.
-- [x] Standardized Airflow tasks to run in the container's native environment (requirements.txt).
-- [x] Full MLflow integration for tracking metrics and artifacts.
+- [x] Optimized `.gitignore` and finalized the Project Flow Diagram (Mermaid).

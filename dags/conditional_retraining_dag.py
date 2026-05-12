@@ -4,6 +4,10 @@ from airflow.operators.bash import BashOperator # type: ignore
 from airflow.operators.empty import EmptyOperator # type: ignore
 from datetime import datetime
 import sys
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Project root path inside the Airflow container
 PROJECT_ROOT = "/usr/local/airflow"
@@ -31,7 +35,8 @@ def check_drift_func():
             print("✅ No data drift detected. Skipping retraining.")
             return 'skip_retraining'
     except Exception as e:
-        print(f"❌ Error in drift monitoring: {e}")
+        print(f"Error in drift monitoring: {e}")
+        logging.info(f"Error in Drift monitoring in evidently: {e}")
         raise ValueError(f"Drift monitoring failed: {e}")
 
 default_args = {

@@ -24,7 +24,7 @@ with DAG(
         """
     )
 
-    # Run full pipeline
+    # Fetching Latest Snap shot data from Database using DVC (Data versioning Control)
     dvc_repro = BashOperator(
         task_id = "run_dvc_pipeline",
         bash_command="""
