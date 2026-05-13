@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pydantic
+pandas
+joblib
+catboost
+requests
+psycopg2-binary
+python-dotenv

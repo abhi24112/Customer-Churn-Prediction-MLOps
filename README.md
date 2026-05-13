@@ -1,10 +1,10 @@
-# Bank Customer Churn Prediction - MLOps Pipeline
+# Telco Customer Churn Prediction - MLOps Pipeline
 
 ---
 
 ## Project Summary
 
-This project is a complete **MLOps pipeline** to predict whether a bank customer will churn or subscribe to a term deposit based on campaign data. It integrates reproducible model training with DVC, orchestrated pipelines using Airflow, and containerization with Docker—designed to be production-ready and easily expandable.
+This project is a complete **MLOps pipeline** to predict whether a telecommunications customer will churn based on demographic and service usage data. It integrates reproducible model training with DVC, orchestrated pipelines using Airflow, and containerization with Docker—designed to be production-ready and easily expandable.
 
 ---
 
@@ -12,6 +12,7 @@ This project is a complete **MLOps pipeline** to predict whether a bank customer
 
 ```
 📁 .dvc/                    → DVC configuration & cache
+📁 api/                     → FastAPI serving layer (main.py, requirements.txt)
 📁 airflow_settings.yaml    → Airflow connections and variables (local setup)
 📁 catboost_info/           → CatBoost training logs and metrics
 📁 config/                  → Configuration files (config.yaml)
@@ -56,11 +57,11 @@ This project is a complete **MLOps pipeline** to predict whether a bank customer
 
 ## Data Overview
 
-**Bank Marketing Dataset** (Managed via PostgreSQL)
+**Telco Customer Churn Dataset** (Managed via PostgreSQL)
 
-- **Source**: UCI Bank Marketing Dataset
-- **Target**: Customer subscription to term deposit (binary classification)
-- **Size**: ~45K records, 16 features + 1 target
+- **Source**: IBM Sample Data (Telco Churn)
+- **Target**: Churn (Yes/No)
+- **Size**: ~7K records, 21 features
 - **Live Store**: PostgreSQL (`churn_raw` table)
 - **Pipeline Source**: `src/data/raw_data/data.csv` (DVC snapshot)
 
@@ -71,45 +72,23 @@ This project is a complete **MLOps pipeline** to predict whether a bank customer
 ```mermaid
 graph TD
 
-A1[Raw Data] --> A2[Preprocessing - src/]
-A2 --> A3[Data Ingestion - src/]
+A1[Raw Data - PostgreSQL] --> A2[DB Snapshot - DVC]
+A2 --> A3[Preprocessing - src/]
 A3 --> A4[Model Training - src/]
 A4 --> A5[Register Model + Artifacts - MLflow]
 
 %% FastAPI Serving
 A5 --> B1[Serve Model via FastAPI]
+B1 --> B2[User Prediction Requests]
+B2 --> B3[API Processes & Predicts]
+B3 --> B4[Prediction Logged back to PostgreSQL]
 
-%% Streamlit Interaction
-B1 --> C1[UI - Streamlit App]
-C1 --> C2[User Enters New Data]
-C2 --> C3[New Data Stored in PostgreSQL]
-
-%% Airflow ETL + Retrain
-C3 --> D1[Trigger Airflow DAG - etl_retarin_dag]
-D1 --> D2[Extract Script]
-D2 --> D3[Transform Script]
-D3 --> D4[Load Script]
-D4 --> D5[Retrain Script]
-D5 --> A5
-
-%% Drift Detection DAG
-C3 --> E1[Airflow DAG - drift_dag]
+%% Airflow Monitoring & Retrain
+B4 --> E1[Airflow DAG - drift_monitoring]
 E1 --> E2{Drift Detected?}
-E2 -->|Yes| D1
+E2 -->|Yes| D1[Trigger Retraining - DVC]
 E2 -->|No| F1[Continue Serving]
-
-%% Monitoring Stack
-B1 --> G1[Prometheus + Grafana - Real-time Monitoring]
-E1 --> G1
-
-%% CI/CD Automation
-H1[GitHub Actions CI Pipeline]
-H1 --> H2[Build & Test]
-H2 --> H3[Push Docker Image to DockerHub]
-H3 --> B1
-
-%% Output + Explainability
-C1 --> I1[Prediction Output + LLM Explainer]
+D1 --> A5
 ```
 
 ---
@@ -198,11 +177,60 @@ Go to `http://localhost:8080`, unpause `conditional_retraining_logic`, and trigg
 - [x] Integrate MLflow for experiment tracking
 - [x] Implement data drift detection (Evidently)
 - [x] Create Airflow branching logic for conditional retraining
+- [x] Add REST API (FastAPI) for model serving
 - [ ] Add Prometheus + Grafana for system monitoring
-- [ ] Add REST API (FastAPI) for model serving
 - [ ] Build Streamlit UI for predictions
 - [ ] Setup CI/CD with GitHub Actions
 - [ ] Implement model versioning & registry in MLflow
+
+---
+
+## 🚀 Model Serving (FastAPI)
+
+The project includes a production-ready FastAPI server to serve the trained CatBoost model.
+
+### 1. Start the API
+```bash
+# Ensure .env is set with DATABASE_URL
+pip install python-dotenv
+python api/main.py
+```
+The server starts at `http://127.0.0.1:8000`.
+
+### 2. Endpoints
+- **GET /**: Health check (checks if model and DB are ready).
+- **POST /predict**: Perform churn prediction.
+  - **Input**: Raw customer features (JSON).
+  - **Output**: `{"prediction": 0|1}`.
+  - **Background**: Automatically logs the request and prediction to PostgreSQL (`churn_raw`) for future retraining.
+
+### 3. Example Request
+```bash
+curl -X POST "http://127.0.0.1:8000/predict" \
+     -H "Content-Type: application/json" \
+     -d '{
+           "customerID": "7590-VHVEG",
+           "gender": "Female",
+           "SeniorCitizen": 0,
+           "Partner": "Yes",
+           "Dependents": "No",
+           "tenure": 1,
+           "PhoneService": "No",
+           "MultipleLines": "No phone service",
+           "InternetService": "DSL",
+           "OnlineSecurity": "No",
+           "OnlineBackup": "Yes",
+           "DeviceProtection": "No",
+           "TechSupport": "No",
+           "StreamingTV": "No",
+           "StreamingMovies": "No",
+           "Contract": "Month-to-month",
+           "PaperlessBilling": "Yes",
+           "PaymentMethod": "Electronic check",
+           "MonthlyCharges": 29.85,
+           "TotalCharges": 29.85
+         }'
+```
 
 ---
 
@@ -293,6 +321,6 @@ This project is open source and available under the MIT License.
 
 ## Acknowledgments
 
-- **Dataset**: UCI Bank Marketing Dataset
+- **Dataset**: IBM Telco Customer Churn Dataset
 - **Framework**: CatBoost, DVC, Airflow communities
 - **Inspiration**: MLOps best practices & production ML patterns

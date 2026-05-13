@@ -168,3 +168,20 @@
     - All Airflow BashOperators must activate the environment first:
     - Command: `conda activate mlopsenv && dvc repro ...`
     - Ensures consistency between local development and orchestration.
+
+    18. REST API Serving (FastAPI)
+    - Goal: Deploy the model for real-time inference.
+    - Components:
+        api/main.py: FastAPI application with Pydantic validation.
+        BackgroundTasks: Asynchronously logs predictions back to Postgres.
+
+    Workflow:
+        1. Receive raw JSON data (Customer Features).
+        2. Preprocess (Cleaning + Domain Features).
+        3. Infer (CatBoost prediction).
+        4. Log to DB (Write to churn_raw for drift monitoring).
+        5. Return JSON prediction (0/1).
+
+    Local Testing:
+        python api/main.py
+        curl -X POST ... (validates model output and DB persistence)

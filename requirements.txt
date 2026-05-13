@@ -14,8 +14,11 @@ astro
 mlflow
 
 # Web app
-fastapi[standard]
 fastapi
+uvicorn
+
+# environment
+python-dotenv
 
 # Utilities
 PyYAML

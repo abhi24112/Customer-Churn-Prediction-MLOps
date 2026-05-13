@@ -8,6 +8,7 @@ This file contains the foundational architecture, workflows, and operational man
 - **Database Access:** When running locally, ensure `docker-compose up -d` is executed to start PostgreSQL.
 - **DVC Usage:** Use `dvc repro -f db_snapshot` to force a new data export from Postgres before running the pipeline.
 - **Airflow 3.x Compatibility:** Use the `schedule` argument instead of `schedule_interval`. Use modern provider paths (e.g., `airflow.providers.standard.operators`).
+- **File Protection:** NEVER modify `documents/workflow_step.txt` unless explicitly instructed by the user.
 
 ## 🏗️ Architecture Overview
 The project follows a "Live Data Store -> Versioned Snapshot -> Reproducible Pipeline" pattern.
