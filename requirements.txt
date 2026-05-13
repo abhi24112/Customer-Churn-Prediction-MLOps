@@ -17,6 +17,9 @@ mlflow
 fastapi
 uvicorn
 
+# Steamlit
+streamlit
+
 # environment
 python-dotenv
 

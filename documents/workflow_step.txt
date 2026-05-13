@@ -185,3 +185,18 @@
     Local Testing:
         python api/main.py
         curl -X POST ... (validates model output and DB persistence)
+
+    19. Interactive Frontend (Streamlit)
+    - Goal: Provide a user-friendly UI for non-technical users.
+    - Components:
+        frontend/app.py: Modern UI with 3-column layout and custom CSS.
+        Confidence Scoring: Logic to display prediction probability as percentage.
+
+    Workflow:
+        1. User enters 21 customer features in the web form.
+        2. UI sends POST request to the FastAPI endpoint.
+        3. UI displays color-coded result (Red for Churn, Green for Stay).
+        4. Confidence score (e.g., 94.2%) is displayed for better transparency.
+
+    Execution:
+        streamlit run frontend/app.py

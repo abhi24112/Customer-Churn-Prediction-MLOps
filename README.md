@@ -13,6 +13,7 @@ This project is a complete **MLOps pipeline** to predict whether a telecommunica
 ```
 📁 .dvc/                    → DVC configuration & cache
 📁 api/                     → FastAPI serving layer (main.py, requirements.txt)
+📁 frontend/                → Streamlit UI (app.py, requirements.txt)
 📁 airflow_settings.yaml    → Airflow connections and variables (local setup)
 📁 catboost_info/           → CatBoost training logs and metrics
 📁 config/                  → Configuration files (config.yaml)
@@ -77,14 +78,16 @@ A2 --> A3[Preprocessing - src/]
 A3 --> A4[Model Training - src/]
 A4 --> A5[Register Model + Artifacts - MLflow]
 
-%% FastAPI Serving
-A5 --> B1[Serve Model via FastAPI]
-B1 --> B2[User Prediction Requests]
-B2 --> B3[API Processes & Predicts]
-B3 --> B4[Prediction Logged back to PostgreSQL]
+%% Serving Layer (UI + API)
+C1[User Interface - Streamlit] <--> B1[Serve Model - FastAPI]
+B1 --> B2[API Processes & Predicts]
+B2 --> B3[Prediction Logged back to PostgreSQL]
 
-%% Airflow Monitoring & Retrain
-B4 --> E1[Airflow DAG - drift_monitoring]
+%% Connection from Training to Serving
+A5 --> B1
+
+%% Monitoring & Retraining (The Feedback Loop)
+B3 -.-> E1[Airflow DAG - Monitoring]
 E1 --> E2{Drift Detected?}
 E2 -->|Yes| D1[Trigger Retraining - DVC]
 E2 -->|No| F1[Continue Serving]
@@ -178,8 +181,8 @@ Go to `http://localhost:8080`, unpause `conditional_retraining_logic`, and trigg
 - [x] Implement data drift detection (Evidently)
 - [x] Create Airflow branching logic for conditional retraining
 - [x] Add REST API (FastAPI) for model serving
+- [x] Build Streamlit UI for predictions
 - [ ] Add Prometheus + Grafana for system monitoring
-- [ ] Build Streamlit UI for predictions
 - [ ] Setup CI/CD with GitHub Actions
 - [ ] Implement model versioning & registry in MLflow
 
@@ -193,7 +196,7 @@ The project includes a production-ready FastAPI server to serve the trained CatB
 ```bash
 # Ensure .env is set with DATABASE_URL
 pip install python-dotenv
-python api/main.py
+fastapi run api/main.py
 ```
 The server starts at `http://127.0.0.1:8000`.
 
@@ -231,6 +234,26 @@ curl -X POST "http://127.0.0.1:8000/predict" \
            "TotalCharges": 29.85
          }'
 ```
+
+---
+
+## 🎨 User Interface (Streamlit)
+
+The project includes a modern web interface for interactive predictions.
+
+### 1. Start the Frontend
+```bash
+# In a new terminal
+pip install -r frontend/requirements.txt
+streamlit run frontend/app.py
+```
+The UI will be available at `http://localhost:8501`.
+
+### 2. Features
+- **Interactive Form**: Easy input for all 21 customer features.
+- **Real-time Prediction**: Communicates with the FastAPI backend.
+- **Confidence Scoring**: Displays the model's confidence percentage for every prediction.
+- **Visual Feedback**: Success/Error cards based on churn risk.
 
 ---
 

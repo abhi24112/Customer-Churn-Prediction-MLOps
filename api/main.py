@@ -1,6 +1,3 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks
-from pydantic import BaseModel
-
 import os
 import sys
 import joblib
@@ -9,6 +6,9 @@ import logging
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from typing import Optional
+
+# Ensure project root is in path for imports
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # Load environment variables from .env if python-dotenv is installed
 try:
@@ -115,6 +115,7 @@ def predict(data:CustomerData, background_tasks: BackgroundTasks):
 
         # 5. predictions
         prediction = int(model.predict(processed_df)[0])
+        probability = float(model.predict_proba(processed_df)[0][1])
 
         # 6. Running background task
         background_tasks.add_task(
@@ -123,7 +124,10 @@ def predict(data:CustomerData, background_tasks: BackgroundTasks):
             prediction
         )
 
-        return {"prediction": prediction}
+        return {
+            "prediction": prediction,
+            "probability": round(probability, 4)
+        }
 
     except Exception as e:
         logging.error(f"Prediction error: {e}")

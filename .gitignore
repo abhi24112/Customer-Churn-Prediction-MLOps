@@ -21,6 +21,7 @@ mlopsenv/
 /reports/plots/
 /src/drift_detection/reports/*.html
 /src/drift_detection/reports/*.json
+/src/images
 
 # MLflow
 mlruns/
