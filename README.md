@@ -68,30 +68,52 @@ This project is a complete **MLOps pipeline** to predict whether a telecommunica
 
 ---
 
-## ⚙️ Project Flow Diagram
+## ⚙️ Project Flow Diagram (End-to-End MLOps)
 
 ```mermaid
 graph TD
+    subgraph "1. Data Layer (Source of Truth)"
+        A1[PostgreSQL Database] -- "churn_raw table" --> A2[DVC db_snapshot stage]
+        A2 -- "Exports to" --> A3["src/data/raw_data/data.csv"]
+    end
 
-A1[Raw Data - PostgreSQL] --> A2[DB Snapshot - DVC]
-A2 --> A3[Preprocessing - src/]
-A3 --> A4[Model Training - src/]
-A4 --> A5[Register Model + Artifacts - MLflow]
+    subgraph "2. Pipeline Layer (DVC & MLflow)"
+        A3 --> B1["Preprocessing Pipeline (src/pipelines/preprocessing_pipeline.py)"]
+        B1 -- "Feature Engineering" --> B2["src/data/processed/processed.csv"]
+        
+        B2 --> C1{Drift Detection Hub}
+        C1 -- "Evidently AI (src/drift_detection/)" --> C2["Retrain? (True/False)"]
+        
+        C2 -- "Yes (Drift Detected)" --> D1["Training Pipeline (src/pipelines/training_pipeline.py)"]
+        D1 -- "Track Metrics/Artifacts" --> D2[MLflow Experiment Tracking]
+        D1 -- "Save Best Model" --> D3["models/baseline_catboost.jbl"]
+        
+        C2 -- "No (Stable)" --> D4[Skip Retraining]
+    end
 
-%% Serving Layer (UI + API)
-C1[User Interface - Streamlit] <--> B1[Serve Model - FastAPI]
-B1 --> B2[API Processes & Predicts]
-B2 --> B3[Prediction Logged back to PostgreSQL]
+    subgraph "3. Orchestration Layer (Airflow)"
+        E1[Airflow DAG: conditional_retraining_logic]
+        E1 -- "Triggers" --> A2
+        E1 -- "Triggers" --> B1
+        E1 -- "Decides Branch" --> C2
+    end
 
-%% Connection from Training to Serving
-A5 --> B1
+    subgraph "4. Serving Layer (FastAPI & Streamlit)"
+        D3 -- "Load Model" --> F1[FastAPI Server]
+        F2[Streamlit User Interface] <-->|Bidirectional REST| F1
+        F1 -- "Predict & Calculate Confidence" --> F2
+    end
 
-%% Monitoring & Retraining (The Feedback Loop)
-B3 -.-> E1[Airflow DAG - Monitoring]
-E1 --> E2{Drift Detected?}
-E2 -->|Yes| D1[Trigger Retraining - DVC]
-E2 -->|No| F1[Continue Serving]
-D1 --> A5
+    subgraph "5. Feedback Loop"
+        F1 -- "BackgroundTasks" --> G1[Log live data + prediction]
+        G1 -- "Append to" --> A1
+    end
+
+    %% Legend/Styling
+    style A1 fill:#2563EB,color:#fff
+    style D3 fill:#10B981,color:#fff
+    style E1 fill:#7C3AED,color:#fff
+    style F2 fill:#FF4B4B,color:#fff
 ```
 
 ---
