@@ -9,6 +9,7 @@ optuna
 
 # airflow
 astro
+apache-airflow
 
 # Experiment tracking
 mlflow
@@ -48,3 +49,4 @@ psycopg2-binary
 
 # Tests
 pytest
+httpx
