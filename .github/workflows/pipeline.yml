@@ -84,6 +84,9 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            # Cleanup space before build
+            sudo docker system prune -af
+            
             # Install Docker and Compose V2 if not present
             if ! [ -x "$(command -v docker)" ]; then
               sudo apt-get update
