@@ -6,12 +6,19 @@ from airflow.operators.bash import BashOperator # type: ignore
 
 PROJECT_ROOT = "/usr/local/airflow"
 
+default_args = {
+    'owner': 'airflow',
+    'start_date': datetime(2026, 5, 3),
+    'retries': 2
+}
+
 with DAG(
     dag_id = "Customer_Churn_DVC_pipeline",
     description = "Run full ML pipeline using DVC Daily",
-    start_date = datetime(2026,5,3),
+    default_args=default_args,
     schedule = "@daily",
-    catchup = False
+    catchup = False,
+    tags=['mlops', 'dvc', 'pipeline']
 ) as dag:
     
     # Pulling the latest data from DVC remote
