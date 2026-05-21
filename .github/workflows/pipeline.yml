@@ -1,13 +1,12 @@
-name: CI - Linting and Testing
+name: Unified ML Pipeline (CI/CD)
 
 on:
   push:
-    paths-ignore:
-      - "README.md"
     branches: [ main ]
-  pull_request:
     paths-ignore:
       - "README.md"
+      - "DEPLOYMENT_AWS.md"
+  pull_request:
     branches: [ main ]
 
 jobs:
@@ -25,9 +24,7 @@ jobs:
           pip install flake8
       - name: Run Flake8
         run: |
-          # stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
   test:
@@ -46,35 +43,64 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
     steps:
       - uses: actions/checkout@v4
-      
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
           cache: 'pip'
-
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
       - name: Create dummy model for tests
         run: |
           mkdir -p models
           python -c "import sys; sys.path.append('.'); import joblib; import pandas as pd; import numpy as np; from catboost import CatBoostClassifier; from src.components import preprocess; data = [{'customerID': '1', 'gender': 'M', 'SeniorCitizen': 0, 'Partner': 'No', 'Dependents': 'No', 'tenure': 1, 'PhoneService': 'Yes', 'MultipleLines': 'No', 'InternetService': 'DSL', 'OnlineSecurity': 'No', 'OnlineBackup': 'No', 'DeviceProtection': 'No', 'TechSupport': 'No', 'StreamingTV': 'No', 'StreamingMovies': 'No', 'Contract': 'Month-to-month', 'PaperlessBilling': 'Yes', 'PaymentMethod': 'E-check', 'MonthlyCharges': 50.0, 'TotalCharges': 50.0}, {'customerID': '2', 'gender': 'F', 'SeniorCitizen': 1, 'Partner': 'Yes', 'Dependents': 'Yes', 'tenure': 72, 'PhoneService': 'No', 'MultipleLines': 'No phone service', 'InternetService': 'Fiber optic', 'OnlineSecurity': 'Yes', 'OnlineBackup': 'Yes', 'DeviceProtection': 'Yes', 'TechSupport': 'Yes', 'StreamingTV': 'Yes', 'StreamingMovies': 'Yes', 'Contract': 'Two year', 'PaperlessBilling': 'No', 'PaymentMethod': 'Bank transfer', 'MonthlyCharges': 100.0, 'TotalCharges': 7200.0}]; df = pd.DataFrame(data); df_p = preprocess(df); cat_cols = df_p.select_dtypes(include=['category', 'object']).columns.tolist(); m = CatBoostClassifier(iterations=1); m.fit(df_p, [1, 0], cat_features=cat_cols); joblib.dump(m, 'models/baseline_bank_churn_model_catboost.jbl')"
-
       - name: Initialize Database
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/churn
         run: |
           python -m backend.scripts.init_db
-
       - name: Run Pytest
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/churn
           AIRFLOW_HOME: ${{ github.workspace }}
         run: |
           pytest tests/
+
+  deploy:
+    name: Deploy to EC2
+    needs: [lint, test] # <--- THIS ENSURES DEPLOY WAITS FOR CI
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST_DNS }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Install Docker and Compose V2 if not present
+            if ! [ -x "$(command -v docker)" ]; then
+              sudo apt-get update
+              sudo apt-get install -y docker.io docker-compose-v2
+              sudo usermod -aG docker $USER
+            fi
+            if ! [ -x "$(command -v dvc)" ]; then
+              sudo snap install dvc --classic
+            fi
+            mkdir -p ~/customer-churn-mlops
+            cd ~/customer-churn-mlops
+            if [ -z "$(ls -A .)" ]; then
+              git clone https://github.com/${{ github.repository }}.git .
+            else
+              sudo chown -R $USER:$USER .
+              git pull origin main
+            fi
+            sudo dvc pull
+            sudo docker compose up -d --build
+            sudo docker image prune -f
