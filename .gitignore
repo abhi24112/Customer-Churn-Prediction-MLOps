@@ -37,3 +37,6 @@ mlruns/
 # Temporary / Test files
 test.py
 random_test
+
+# GenAi md
+GEMINI.md

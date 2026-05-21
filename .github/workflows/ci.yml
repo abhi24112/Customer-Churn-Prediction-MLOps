@@ -1,0 +1,81 @@
+name: CI - Linting and Testing
+
+on:
+  push:
+    paths-ignore:
+      - "README.md"
+    branches: [ main ]
+  pull_request:
+    paths-ignore:
+      - "README.md"
+    branches: [ main ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Linting Tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8
+      - name: Run Flake8
+        run: |
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: churn
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install httpx  # Required for TestClient
+
+      - name: Create dummy model for tests
+        run: |
+          mkdir -p models
+          python -c "import joblib; import numpy as np; from catboost import CatBoostClassifier; m = CatBoostClassifier(); m.fit(np.random.rand(10, 20), [0,1,0,1,0,1,0,1,0,1]); joblib.dump(m, 'models/baseline_bank_churn_model_catboost.jbl')"
+
+      - name: Initialize Database
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/churn
+        run: |
+          python -m backend.scripts.init_db
+
+      - name: Run Pytest
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/churn
+          AIRFLOW_HOME: ${{ github.workspace }}
+        run: |
+          pytest tests/
