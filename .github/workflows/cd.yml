@@ -1,0 +1,51 @@
+name: CD - Deploy to AWS EC2
+
+on:
+  push:
+    branches: [ main ]
+  workflow_run:
+    workflows: ["CI - Linting and Testing"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    if: ${{ github.event_name == 'push' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST_DNS }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Install Docker if not present
+            if ! [ -x "$(command -v docker)" ]; then
+              sudo apt-get update
+              sudo apt-get install -y docker.io docker-compose
+              sudo usermod -aG docker $USER
+            fi
+
+            # Setup directory
+            mkdir -p ~/customer-churn-mlops
+            cd ~/customer-churn-mlops
+            
+            # Initial clone if directory is empty
+            if [ -z "$(ls -A .)" ]; then
+              git clone https://github.com/${{ github.repository }}.git .
+            else
+              git pull origin main
+            fi
+            
+            # Pull latest data/models via DVC
+            # Assumes EC2 has IAM Role for S3 access
+            dvc pull
+            
+            # Restart services
+            docker-compose up -d --build
+            
+            # Optional: Prune old images to save space
+            docker image prune -f
