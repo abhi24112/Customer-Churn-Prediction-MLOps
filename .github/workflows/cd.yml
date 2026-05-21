@@ -22,11 +22,16 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Install Docker if not present
+            # Install Docker and Compose V2 if not present
             if ! [ -x "$(command -v docker)" ]; then
               sudo apt-get update
-              sudo apt-get install -y docker.io docker-compose
+              sudo apt-get install -y docker.io docker-compose-v2
               sudo usermod -aG docker $USER
+            fi
+
+            # Install DVC if not present
+            if ! [ -x "$(command -v dvc)" ]; then
+              sudo snap install dvc --classic
             fi
 
             # Setup directory
@@ -37,15 +42,17 @@ jobs:
             if [ -z "$(ls -A .)" ]; then
               git clone https://github.com/${{ github.repository }}.git .
             else
+              # Fix permissions if needed
+              sudo chown -R $USER:$USER .
               git pull origin main
             fi
             
             # Pull latest data/models via DVC
             # Assumes EC2 has IAM Role for S3 access
-            dvc pull
+            sudo dvc pull
             
             # Restart services
-            docker-compose up -d --build
+            sudo docker compose up -d --build
             
             # Optional: Prune old images to save space
-            docker image prune -f
+            sudo docker image prune -f

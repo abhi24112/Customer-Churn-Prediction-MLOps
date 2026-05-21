@@ -23,14 +23,15 @@ This guide explains how to deploy this MLOps project to an AWS EC2 instance usin
   - `8080` (Airflow UI)
 
 ### B. Prepare the EC2 Environment
-SSH into your instance and run:
+The GitHub Action will automatically install Docker and DVC for you. However, if you want to do it manually:
 ```bash
-# Update and install Docker
+# Update and install Docker + Compose V2
 sudo apt-get update
-sudo apt install docker.io -y
-sudo apt install docker-compose -y
+sudo apt install docker.io docker-compose-v2 -y
 sudo usermod -aG docker $USER
-newgrp docker
+
+# Install DVC
+sudo snap install dvc --classic
 ```
 
 ### C. Create IAM Role
@@ -55,10 +56,10 @@ git clone https://github.com/your-username/your-repo.git
 cd your-repo
 
 # Pull DVC artifacts (Requires AWS CLI/Role)
-dvc pull
+sudo dvc pull
 
 # Start all services
-docker-compose up -d --build
+sudo docker compose up -d --build
 ```
 
 ---
@@ -82,4 +83,6 @@ The project uses a GitHub Action to automate this. Every time you push to `main`
 ## 🛠️ Common Troubleshooting
 - **Out of Memory**: If `docker-compose build` fails, your EC2 might need a swap file or a larger instance.
 - **Connection Refused**: Check your AWS Security Group ports.
+- **DVC Pull Failure**: Ensure the IAM Role is correctly attached to the EC2 instance.
+ ports.
 - **DVC Pull Failure**: Ensure the IAM Role is correctly attached to the EC2 instance.
